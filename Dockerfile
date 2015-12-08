@@ -3,10 +3,11 @@ MAINTAINER Patrick <docker@patrickhenry.co.uk>
 RUN rpm --import http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7 \
     && rpm --import http://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7 \
     && rpm -Uvh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
-
+RUN yum -y install \
+deltarpm
 RUN yum -y install \
 yum-utils \
-    httpd \
+git \
     mysql-devel \
     mysql-libs \
     mod_ssl \
@@ -21,7 +22,7 @@ RUN rpm -Uvh http://rpms.remirepo.net/enterprise/remi-release-7.rpm
 RUN yum-config-manager --enable remi-php70
 
 RUN yum -y install \
- php70 \
+php.x86_64 \
  php-mbstring \
  php-mysqlnd \
  php-opcache \
@@ -54,6 +55,7 @@ RUN sed -i \
     -e 's~^HeaderName \(.*\)$~#HeaderName \1~g' \
     /etc/httpd/conf/httpd.conf
 # # Disable Apache language based content negotiation #
+
 RUN sed -i \
     -e 's~^LanguagePriority \(.*\)$~#LanguagePriority \1~g' \
     -e 's~^ForceLanguagePriority \(.*\)$~#ForceLanguagePriority \1~g' \
@@ -81,7 +83,10 @@ RUN sed -i \
   -e 's~^;date.timezone =$~date.timezone = Europe/Rome~g' \
   -e 's~^;user_ini.filename =$~user_ini.filename =~g' \
    /etc/php.ini
+
 RUN echo '<?php phpinfo(); ?>' > /var/www/html/index.php
+
+RUN cd /var/www/html && composer require twbs/bootstrap
 
 RUN rm -rf /sbin/sln \
     ; rm -rf /usr/{{lib,share}/locale,share/{man,doc,info,gnome/help,cracklib,il8n},{lib,lib64}/gconv,bin/localedef,sbin/build-locale-archive} \
