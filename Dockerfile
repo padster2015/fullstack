@@ -1,10 +1,11 @@
 FROM centos:7
-MAINTAINER Padster83 <docker@patrickhenry.co.uk>
-# Import the Centos-6 RPM GPG key to prevent warnings and Add EPEL Repository
+MAINTAINER Patrick <docker@patrickhenry.co.uk>
 RUN rpm --import http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7 \
     && rpm --import http://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7 \
     && rpm -Uvh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
+
 RUN yum -y install \
+yum-utils \
     httpd \
     mysql-devel \
     mysql-libs \
@@ -14,18 +15,25 @@ RUN yum -y install \
     && yum -y update bash \
     && rm -rf /var/cache/yum/* \
     && yum clean all
+
 RUN cd /tmp && wget http://rpms.famillecollet.com/enterprise/remi-release-7.rpm
-RUN rpm -Uvh https://mirror.webtatic.com/yum/el7/webtatic-release.rpm
-    RUN yum -y install \
-    php70 \
-    php70w \
-    php70w-opcache \
-    php70w-mysql \
-    php70w-mcrypt \
-composer \
-# # UTC Timezone & Networking # RUN ln -sf /usr/share/zoneinfo/UTC /etc/localtime \
-    && echo "NETWORKING=yes" > /etc/sysconfig/network
-# # Global Apache configuration changes
+RUN rpm -Uvh http://rpms.remirepo.net/enterprise/remi-release-7.rpm
+RUN yum-config-manager --enable remi-php70
+
+RUN yum -y install \
+ php70 \
+ php-mbstring \
+ php-mysqlnd \
+ php-opcache \
+    php-mysql \
+    php-pear-MDB2-Driver-mysqli \
+    php-pecl-memcached \
+    php-xml \
+ composer
+
+# # UTC Timezone & Networking
+RUN echo "NETWORKING=yes" > /etc/sysconfig/network
+
 RUN sed -i \
     -e 's~^ServerSignature On$~ServerSignature Off~g' \
     -e 's~^ServerTokens OS$~ServerTokens Prod~g' \
@@ -34,6 +42,7 @@ RUN sed -i \
     -e 's~^NameVirtualHost \(.*\)$~#NameVirtualHost \1~g' \
     /etc/httpd/conf/httpd.conf
 # # Disable Apache directory indexes #
+
 RUN sed -i \
     -e 's~^IndexOptions \(.*\)$~#IndexOptions \1~g' \
     -e 's~^IndexIgnore \(.*\)$~#IndexIgnore \1~g' \
@@ -51,6 +60,7 @@ RUN sed -i \
     -e 's~^AddLanguage \(.*\)$~#AddLanguage \1~g' \
     /etc/httpd/conf/httpd.conf
 # # Disable all Apache modules and enable the minimum #
+
 RUN sed -i \
     -e 's~^\(LoadModule .*\)$~#\1~g' \
     -e 's~^#LoadModule mime_module ~LoadModule mime_module ~g' \
@@ -65,15 +75,18 @@ RUN sed -i \
     -e 's~^#LoadModule headers_module ~LoadModule headers_module ~g' \
     -e 's~^#LoadModule alias_module ~LoadModule alias_module ~g' \
     /etc/httpd/conf/httpd.conf
-# # Global PHP configuration changes #
+
+# Global PHP configuration changes
 RUN sed -i \
-    -e 's~^;date.timezone =$~date.timezone = Europe/Rome~g' \
-    -e 's~^;user_ini.filename =$~user_ini.filename =~g' \
-    /etc/php.ini
+  -e 's~^;date.timezone =$~date.timezone = Europe/Rome~g' \
+  -e 's~^;user_ini.filename =$~user_ini.filename =~g' \
+   /etc/php.ini
 RUN echo '<?php phpinfo(); ?>' > /var/www/html/index.php
-# # Copy files into place # #ADD # # Purge #
+
 RUN rm -rf /sbin/sln \
     ; rm -rf /usr/{{lib,share}/locale,share/{man,doc,info,gnome/help,cracklib,il8n},{lib,lib64}/gconv,bin/localedef,sbin/build-locale-archive} \
     ; rm -rf /var/cache/{ldconfig,yum}/*
+
 EXPOSE 80 443
- CMD /usr/sbin/httpd -c "ErrorLog /dev/stdout" -DFOREGROUND
+
+CMD /usr/sbin/httpd -c "ErrorLog /dev/stdout" -DFOREGROUND
